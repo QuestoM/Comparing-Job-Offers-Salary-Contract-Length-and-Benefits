@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון השוואת משכורות מתקדם</title>
+    <meta name="description" content="מחשבון מתקדם להשוואת הצעות עבודה עם התחשבות בגורמים כמו שכר, בונוסים, מניות, ביטחון תעסוקתי וחוסר ודאות">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.21.2/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f39c12;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --border-radius: 0.5rem;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            font-size: 16px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 1rem;
+        }
+        
+        .container {
+            max-width: 48rem;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        
+        h1, h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+        }
+        
+        h2 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+        }
+        
+        .offer-container {
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-left: 0.5rem;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .slider {
+            flex-grow: 1;
+            margin-left: 0.5rem;
+        }
+        
+        .slider-value {
+            min-width: 2.5rem;
+            text-align: center;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        button:hover {
+            background-color: #3a7ac5;
+        }
+        
+        .results {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #e8f4fd;
+            border-radius: var(--border-radius);
+        }
+        
+        .chart-container {
+            margin-top: 2rem;
+            height: 20rem;
+        }
+        
+        .recommendation {
+            margin-top: 1rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        @media (max-width: 48rem) {
+            html {
+                font-size: 14px;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .offer-container {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function SalaryCalculator() {
+            const [offer1, setOffer1] = useState({
+                name: "הצעה 1",
+                salary: 40000,
+                contractLength: 18,
+                renewable: true,
+                stocks: false,
+                stocksValue: 0,
+                bonus: false,
+                bonusPercentage: 0,
+                extraSalary: false,
+                jobSecurity: 5,
+                companyStability: 5,
+                growthPotential: 5,
+                workLifeBalance: 5
+            });
+            const [offer2, setOffer2] = useState({
+                name: "הצעה 2",
+                salary: 30000,
+                contractLength: 12,
+                renewable: true,
+                stocks: true,
+                stocksValue: 5,
+                bonus: true,
+                bonusPercentage: 10,
+                extraSalary: true,
+                jobSecurity: 7,
+                companyStability: 8,
+                growthPotential: 7,
+                workLifeBalance: 6
+            });
+            const [results, setResults] = useState(null);
+            const [recommendation, setRecommendation] = useState("");
+            const chartRef = useRef(null);
+
+            useEffect(() => {
+                calculateResults();
+            }, [offer1, offer2]);
+
+            useEffect(() => {
+                if (results) {
+                    renderChart();
+                }
+            }, [results]);
+
+            const calculateResults = () => {
+                const offer1Total = calculateTotalCompensation(offer1);
+                const offer2Total = calculateTotalCompensation(offer2);
+                
+                const offer1Score = calculateOfferScore(offer1, offer1Total);
+                const offer2Score = calculateOfferScore(offer2, offer2Total);
+                
+                setResults({
+                    offer1: offer1Total,
+                    offer2: offer2Total,
+                    offer1Score,
+                    offer2Score,
+                    difference: offer2Total - offer1Total
+                });
+                
+                setRecommendation(generateRecommendation(offer1, offer2, offer1Score, offer2Score));
+            };
+
+            const calculateTotalCompensation = (offer) => {
+                let total = offer.salary * offer.contractLength;
+                
+                if (offer.extraSalary) {
+                    total += offer.salary;
+                }
+                
+                if (offer.bonus) {
+                    total += offer.salary * (offer.bonusPercentage / 100);
+                }
+                
+                if (offer.stocks) {
+                    total += offer.salary * (offer.stocksValue / 100);
+                }
+                
+                return total;
+            };
+
+            const calculateOfferScore = (offer, totalCompensation) => {
+                const securityFactor = (offer.jobSecurity + offer.companyStability) / 20;
+                const growthFactor = offer.growthPotential / 10;
+                const balanceFactor = offer.workLifeBalance / 10;
+                
+                return totalCompensation * (1 + securityFactor + growthFactor + balanceFactor);
+            };
+
+            const generateRecommendation = (offer1, offer2, score1, score2) => {
+                const scoreDifference = Math.abs(score1 - score2);
+                const percentageDifference = (scoreDifference / Math.min(score1, score2)) * 100;
+                
+                if (percentageDifference < 5) {
+                    return "שתי ההצעות קרובות מאוד. שקול גורמים אישיים נוספים בבחירתך.";
+                } else if (score1 > score2) {
+                    return `${offer1.name} נראית עדיפה בהתחשב בכל הגורמים.`;
+                } else {
+                    return `${offer2.name} נראית עדיפה בהתחשב בכל הגורמים.`;
+                }
+            };
+
+            const renderOffer = (offer, setOffer, offerNumber) => (
+                <div className="offer-container">
+                    <h2>{offer.name}</h2>
+                    <div className="input-group">
+                        <label>
+                            שם ההצעה:
+                            <input
+                                type="text"
+                                value={offer.name}
+                                onChange={(e) => setOffer({...offer, name: e.target.value})}
+                            />
+                        </label>
+                    </div>
+                    <div className="input-group">
+                        <label>
+                            משכורת שנתית:
+                            <input
+                                type="number"
+                                value={offer.salary}
+                                onChange={(e) => setOffer({...offer, salary: Number(e.target.value)})}
+                            />
+                        </label>
+                    </div>
+                    <div className="input-group">
+                        <label>
+                            אורך חוזה (בחודשים):
+                            <input
+                                type="number"
+                                value={offer.contractLength}
+                                onChange={(e) => setOffer({...offer, contractLength: Number(e.target.value)})}
+                            />
+                        </label>
+                    </div>
+                    <div className="checkbox-group">
+                        <input
+                            type="checkbox"
+                            checked={offer.renewable}
+                            onChange={(e) => setOffer({...offer, renewable: e.target.checked})}
+                            id={`renewable-${offerNumber}`}
+                        />
+                        <label htmlFor={`renewable-${offerNumber}`}>חוזה מתחדש</label>
+                    </div>
+                    <div className="checkbox-group">
+                        <input
+                            type="checkbox"
+                            checked={offer.stocks}
+                            onChange={(e) => setOffer({...offer, stocks: e.target.checked})}
+                            id={`stocks-${offerNumber}`}
+                        />
+                        <label htmlFor={`stocks-${offerNumber}`}>מניות</label>
+                    </div>
+                    {offer.stocks && (
+                        <div className="input-group">
+                            <label>
+                                ערך מניות (% מהשכר):
+                                <input
+                                    type="number"
+                                    value={offer.stocksValue}
+                                    onChange={(e) => setOffer({...offer, stocksValue: Number(e.target.value)})}
+                                />
+                            </label>
+                        </div>
+                    )}
+                    <div className="checkbox-group">
+                        <input
+                            type="checkbox"
+                            checked={offer.bonus}
+                            onChange={(e) => setOffer({...offer, bonus: e.target.checked})}
+                            id={`bonus-${offerNumber}`}
+                        />
+                        <label htmlFor={`bonus-${offerNumber}`}>בונוס שנתי</label>
+                    </div>
+                    {offer.bonus && (
+                        <div className="input-group">
+                            <label>
+                                אחוז בונוס:
+                                <input
+                                    type="number"
+                                    value={offer.bonusPercentage}
+                                    onChange={(e) => setOffer({...offer, bonusPercentage: Number(e.target.value)})}
+                                />
+                            </label>
+                        </div>
+                    )}
+                    <div className="checkbox-group">
+                        <input
+                            type="checkbox"
+                            checked={offer.extraSalary}
+                            onChange={(e) => setOffer({...offer, extraSalary: e.target.checked})}
+                            id={`extraSalary-${offerNumber}`}
+                        />
+                        <label htmlFor={`extraSalary-${offerNumber}`}>משכורת 13</label>
+                    </div>
+                    <div className="slider-container">
+                        <label htmlFor={`jobSecurity-${offerNumber}`}>ביטחון תעסוקתי:</label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={offer.jobSecurity}
+                            onChange={(e) => setOffer({...offer, jobSecurity: Number(e.target.value)})}
+                            className="slider"
+                            id={`jobSecurity-${offerNumber}`}
+                        />
+                        <span className="slider-value">{offer.jobSecurity}</span>
+                    </div>
+                    <div className="slider-container">
+                        <label htmlFor={`companyStability-${offerNumber}`}>יציבות החברה:</label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={offer.companyStability}
+                            onChange={(e) => setOffer({...offer, companyStability: Number(e.target.value)})}
+                            className="slider"
+                            id={`companyStability-${offerNumber}`}
+                        />
+                        <span className="slider-value">{offer.companyStability}</span>
+                    </div>
+                    <div className="slider-container">
+                        <label htmlFor={`growthPotential-${offerNumber}`}>פוטנציאל צמיחה:</label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={offer.growthPotential}
+                            onChange={(e) => setOffer({...offer, growthPotential: Number(e.target.value)})}
+                            className="slider"
+                            id={`growthPotential-${offerNumber}`}
+                        />
+                        <span className="slider-value">{offer.growthPotential}</span>
+                    </div>
+                    <div className="slider-container">
+                        <label htmlFor={`workLifeBalance-${offerNumber}`}>איזון עבודה-חיים:</label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={offer.workLifeBalance}
+                            onChange={(e) => setOffer({...offer, workLifeBalance: Number(e.target.value)})}
+                            className="slider"
+                            id={`workLifeBalance-${offerNumber}`}
+                        />
+                        <span className="slider-value">{offer.workLifeBalance}</span>
+                    </div>
+                </div>
+            );
+
+            const renderChart = () => {
+                const ctx = document.getElementById('comparison-chart');
+                
+                if (chartRef.current) {
+                    chartRef.current.destroy();
+                }
+                
+                chartRef.current = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['תגמול כולל', 'ביטחון תעסוקתי', 'יציבות החברה', 'פוטנציאל צמיחה', 'איזון עבודה-חיים'],
+                        datasets: [
+                            {
+                                label: offer1.name,
+                                data: [
+                                    results.offer1 / 1000,
+                                    offer1.jobSecurity,
+                                    offer1.companyStability,
+                                    offer1.growthPotential,
+                                    offer1.workLifeBalance
+                                ],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(54, 162, 235)',
+                                pointBackgroundColor: 'rgb(54, 162, 235)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgb(54, 162, 235)'
+                            },
+                            {
+                                label: offer2.name,
+                                data: [
+                                    results.offer2 / 1000,
+                                    offer2.jobSecurity,
+                                    offer2.companyStability,
+                                    offer2.growthPotential,
+                                    offer2.workLifeBalance
+                                ],
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                pointBackgroundColor: 'rgb(255, 99, 132)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgb(255, 99, 132)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    display: false
+                                },
+                                suggestedMin: 0,
+                                suggestedMax: 10
+                            }
+                        }
+                    }
+                });
+            };
+
+            return (
+                <div className="container">
+                    <h1>מחשבון השוואת משכורות מתקדם</h1>
+                    {renderOffer(offer1, setOffer1, 1)}
+                    {renderOffer(offer2, setOffer2, 2)}
+                    {results && (
+                        <div className="results">
+                            <h2>תוצאות</h2>
+                            <p>סך הכל {offer1.name}: ₪{results.offer1.toLocaleString()} (ציון: {results.offer1Score.toFixed(2)})</p>
+                            <p>סך הכל {offer2.name}: ₪{results.offer2.toLocaleString()} (ציון: {results.offer2Score.toFixed(2)})</p>
+                            <p>הפרש: ₪{Math.abs(results.difference).toLocaleString()} {results.difference > 0 ? `לטובת ${offer2.name}` : `לטובת ${offer1.name}`}</p>
+                            <div className="recommendation">{recommendation}</div>
+                        </div>
+                    )}
+                    <div className="chart-container">
+                        <canvas id="comparison-chart"></canvas>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<SalaryCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
