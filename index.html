@@ -286,7 +286,7 @@
                     </div>
                     <div className="input-group">
                         <label>
-                            משכורת שנתית:
+                            משכורת חודשית:
                             <input
                                 type="number"
                                 value={offer.salary}
@@ -426,6 +426,9 @@
                     chartRef.current.destroy();
                 }
                 
+                const maxSalary = Math.max(results.offer1, results.offer2);
+                const salaryScale = maxSalary > 1000000 ? 1000000 : (maxSalary > 100000 ? 100000 : 10000);
+                
                 chartRef.current = new Chart(ctx, {
                     type: 'radar',
                     data: {
@@ -434,7 +437,7 @@
                             {
                                 label: offer1.name,
                                 data: [
-                                    results.offer1 / 1000,
+                                    results.offer1 / salaryScale,
                                     offer1.jobSecurity,
                                     offer1.companyStability,
                                     offer1.growthPotential,
@@ -450,7 +453,7 @@
                             {
                                 label: offer2.name,
                                 data: [
-                                    results.offer2 / 1000,
+                                    results.offer2 / salaryScale,
                                     offer2.jobSecurity,
                                     offer2.companyStability,
                                     offer2.growthPotential,
@@ -473,7 +476,38 @@
                                     display: false
                                 },
                                 suggestedMin: 0,
-                                suggestedMax: 10
+                                suggestedMax: 10,
+                                ticks: {
+                                    stepSize: 2
+                                },
+                                pointLabels: {
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.r !== null) {
+                                            if (context.label === 'תגמול כולל') {
+                                                label += '₪' + (context.parsed.r * salaryScale).toLocaleString();
+                                            } else {
+                                                label += context.parsed.r;
+                                            }
+                                        }
+                                        return label;
+                                    }
+                                }
                             }
                         }
                     }
@@ -496,6 +530,7 @@
                     )}
                     <div className="chart-container">
                         <canvas id="comparison-chart"></canvas>
+                        <p className="chart-explanation">* ערך "תגמול כולל" בגרף מוצג בקנה מידה מותאם להשוואה עם שאר הערכים. עבר על כל נקודה בגרף לקבלת הערך המדויק.</p>
                     </div>
                 </div>
             );
